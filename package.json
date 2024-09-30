@@ -1,0 +1,25 @@
+{
+  "name": "flipit_backend",
+  "version": "1.0.0",
+  "description": "The flipit backend project, manage and learn new language with Flipit",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flipitflashcard/backend.git"
+  },
+  "keywords": [
+    "flipit"
+  ],
+  "author": "Flipit Organization",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/flipitflashcard/backend/issues"
+  },
+  "homepage": "https://github.com/flipitflashcard/backend#readme",
+  "devDependencies": {
+    "prisma": "^5.20.0"
+  }
+}
