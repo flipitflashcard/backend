@@ -4,7 +4,7 @@
   "description": "The flipit backend project, manage and learn new language with Flipit",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon app.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,13 @@
     "prisma": "^5.20.0"
   },
   "dependencies": {
-    "@prisma/client": "^5.20.0"
+    "@prisma/client": "^5.20.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "express": "^4.21.0",
+    "express-validator": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemon": "^3.1.7"
   }
 }
