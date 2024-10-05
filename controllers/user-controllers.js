@@ -2,9 +2,6 @@
 const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// express validator
-const { validationResult } = require("express-validator");
-
 // bcrypt for password hashing
 const bcrypt = require("bcrypt");
 
@@ -13,6 +10,7 @@ const crypto = require("crypto");
 
 // jsonwebtoken
 const jwt = require("jsonwebtoken");
+const e = require("express");
 
 // function to hash password
 async function hashPassword(password) {
@@ -43,19 +41,11 @@ function hashJwtToken(token) {
 }
 
 const SignUp = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        const error = errors.array()[0];
-        return res.status(422).json({
-            message: error.msg,
-            field: error.param
-        });
-    }
 
     const { email, password } = req.body;
     const hashedPassword = await hashPassword(password);
 
-    const token = jwt.sign({ email }, process.env.SECRET_KEY);
+    const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
     const hashedToken = hashJwtToken(token);
 
     try {
@@ -84,14 +74,6 @@ const SignUp = async (req, res, next) => {
 }
 
 const LogIn = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        const error = errors.array()[0];
-        return res.status(422).json({
-            message: error.msg,
-            field: error.param
-        });
-    }
 
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({
@@ -103,7 +85,7 @@ const LogIn = async (req, res, next) => {
     if (user) {
         const accuratePassword = await comparePasswords(password, user.password);
         if (accuratePassword) {
-            const token = jwt.sign({ email }, process.env.SECRET_KEY);
+            const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
             const hashedToken = hashJwtToken(token);
             await prisma.user.update({
                 where: {
@@ -129,7 +111,50 @@ const LogIn = async (req, res, next) => {
     }
 }
 
+const LogOut = async (req, res, next) => {
+    const { email } = req.payload;
+    const user = await prisma.user.findUnique({
+        where: { email }
+    })
+
+    if (!user) {
+        res.status(404).json({
+            message: "User not found!"
+        })
+    } else {
+        await prisma.user.update({
+            where: {
+                email
+            },
+            data: {
+                auth_token: null
+            }
+        })
+        res.status(200).json({
+            message: "You have been logged out!"
+        })
+    }
+}
+
+const RefreshToken = async (req, res, next) => {
+    const token = jwt.sign({ email: req.payload.email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
+    const hashedToken = hashJwtToken(token);
+    await prisma.user.update({
+        where: {
+            email: req.payload.email
+        },
+        data: {
+            auth_token: hashedToken
+        }
+    })
+    res.status(200).json({
+        token
+    })
+}
+
 module.exports = {
     SignUp,
-    LogIn
+    LogIn,
+    LogOut,
+    RefreshToken
 }
