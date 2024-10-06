@@ -45,16 +45,25 @@ const SignUp = async (req, res, next) => {
     const { email, password } = req.body;
     const hashedPassword = await hashPassword(password);
 
-    const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
-    const hashedToken = hashJwtToken(token);
 
     try {
-        await prisma.user.create({
+        const user = await prisma.user.create({
             data: {
                 email: email,
                 password: hashedPassword,
-                auth_token: hashedToken,
                 created_at: Date.now()
+            }
+        })
+
+        const token = jwt.sign({ email: email, id: user.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
+        const hashedToken = hashJwtToken(token);
+
+        await prisma.user.update({
+            where: {
+                id: user.id
+            },
+            data: {
+                auth_token: hashedToken,
             }
         })
     } catch (e) {
@@ -85,14 +94,15 @@ const LogIn = async (req, res, next) => {
     if (user) {
         const accuratePassword = await comparePasswords(password, user.password);
         if (accuratePassword) {
-            const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
+            const token = jwt.sign({ email: email, id: user.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
             const hashedToken = hashJwtToken(token);
             await prisma.user.update({
                 where: {
                     email
                 },
                 data: {
-                    auth_token: hashedToken
+                    auth_token: hashedToken,
+                    updated_at: Date.now()
                 }
             })
             res.status(200).json({
@@ -127,7 +137,8 @@ const LogOut = async (req, res, next) => {
                 email
             },
             data: {
-                auth_token: null
+                auth_token: null,
+                updated_at: Date.now()
             }
         })
         res.status(200).json({
@@ -137,14 +148,15 @@ const LogOut = async (req, res, next) => {
 }
 
 const RefreshToken = async (req, res, next) => {
-    const token = jwt.sign({ email: req.payload.email }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
+    const token = jwt.sign({ email: req.payload.email, id: req.payload.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
     const hashedToken = hashJwtToken(token);
     await prisma.user.update({
         where: {
             email: req.payload.email
         },
         data: {
-            auth_token: hashedToken
+            auth_token: hashedToken,
+            updated_at: Date.now()
         }
     })
     res.status(200).json({
