@@ -9,13 +9,14 @@ datasource db {
 }
 
 model User {
-  id      BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
-  email   String   @unique @db.VarChar(100)
-  password String @db.VarChar(100)
-  auth_token String? @db.VarChar(64)
-  created_at BigInt @db.UnsignedBigInt
-  updated_at BigInt? @db.UnsignedBigInt
-  deleted_at BigInt? @db.UnsignedBigInt
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email         String    @unique @db.VarChar(100)
+  password      String    @db.VarChar(100)
+  access_token  String?   @db.VarChar(64)
+  refresh_token String?   @db.VarChar(64)
+  created_at    BigInt    @db.UnsignedBigInt
+  updated_at    BigInt?   @db.UnsignedBigInt
+  deleted_at    BigInt?   @db.UnsignedBigInt
 
   boxes Box[]
   settings Setting[]

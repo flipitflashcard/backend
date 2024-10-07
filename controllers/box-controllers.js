@@ -2,8 +2,6 @@
 const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const e = require("express");
-
 // Create a new box
 const CreateBox = async (req, res) => {
     try {

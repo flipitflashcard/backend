@@ -9,7 +9,7 @@ const router = express.Router();
 
 const { SignUp, LogIn, LogOut, RefreshToken } = require("../controllers/user-controllers");
 
-
+// Public routes
 router.post(
     "/signup",
     [
@@ -38,10 +38,12 @@ router.post(
     LogIn
 );
 
-// checking for authenticated
-router.use(isAuthenticated);
-
-router.post("/logout", LogOut);
 router.post("/refresh-token", RefreshToken);
+
+// Protected routes
+router.post("/logout", isAuthenticated, LogOut);
+
+// If you have other protected routes, add them like this:
+// router.get("/profile", isAuthenticated, GetUserProfile);
 
 module.exports = router;

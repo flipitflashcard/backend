@@ -1,37 +1,56 @@
+// middlewares/auth.js
+
 const jwt = require('jsonwebtoken');
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+const crypto = require("crypto");
 
-function isAuthenticated(req, res, next) {
-    const { authorization } = req.headers;
+function hashToken(token) {
+    const hash = crypto.createHash('sha256');
+    hash.update(token);
+    return hash.digest('hex');
+}
 
-    if (!authorization) {
-        res.status(401).json({
-            messgae: 'Token is not provided',
-            field: 'Authorization'
-        });
-    }
-
+const isAuthenticated = async (req, res, next) => {
     try {
-        const token = authorization.split(' ')[1];
-        const payload = jwt.verify(token, process.env.SECRET_KEY);
-        req.payload = payload;
-    } catch (err) {
-        console.log(err);
-
-        if (err.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                message: err.name
-            })
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Authentication required' });
         }
 
-        return res.status(500).json({
-            message: 'Something went wrong',
-            error: err.message
-        })
-    }
+        const token = authHeader.split(' ')[1];
 
-    return next();
-}
+        try {
+            const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+            const hashedToken = hashToken(token);
+
+            const user = await prisma.user.findFirst({
+                where: {
+                    email: decoded.email,
+                    access_token: hashedToken
+                }
+            });
+
+            if (!user) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
+
+            req.payload = decoded;
+            next();
+        } catch (error) {
+            if (error instanceof jwt.TokenExpiredError) {
+                return res.status(401).json({
+                    message: 'Token expired',
+                    code: 'TOKEN_EXPIRED'
+                });
+            }
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
 module.exports = {
     isAuthenticated
-}
+};
