@@ -1,167 +1,196 @@
-// prisma client
 const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
-
-// bcrypt for password hashing
 const bcrypt = require("bcrypt");
-
-// crypto for token hashing
 const crypto = require("crypto");
-
-// jsonwebtoken
 const jwt = require("jsonwebtoken");
-const e = require("express");
 
-// function to hash password
+// Existing helper functions remain the same
 async function hashPassword(password) {
     try {
         const saltRounds = 12;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        return hashedPassword;
+        return await bcrypt.hash(password, saltRounds);
     } catch (error) {
         console.error("Error hashing password:", error);
     }
 }
 
-// function to compare passwords
 async function comparePasswords(enteredPassword, storedHash) {
     try {
-        const match = await bcrypt.compare(enteredPassword, storedHash);
-        return match;
+        return await bcrypt.compare(enteredPassword, storedHash);
     } catch (error) {
         console.error("Error comparing passwords:", error);
     }
 }
 
-// function to hash jwt
-function hashJwtToken(token) {
+function hashToken(token) {
     const hash = crypto.createHash('sha256');
     hash.update(token);
     return hash.digest('hex');
 }
 
-const SignUp = async (req, res, next) => {
+// Generate tokens
+function generateTokens(user) {
+    const accessToken = jwt.sign(
+        { email: user.email, id: user.id },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    );
 
+    const refreshToken = jwt.sign(
+        { email: user.email, id: user.id },
+        process.env.REFRESH_TOKEN_SECRET,
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+    );
+
+    return { accessToken, refreshToken };
+}
+
+const SignUp = async (req, res) => {
     const { email, password } = req.body;
     const hashedPassword = await hashPassword(password);
-
 
     try {
         const user = await prisma.user.create({
             data: {
-                email: email,
+                email,
                 password: hashedPassword,
                 created_at: Date.now()
             }
-        })
+        });
 
-        const token = jwt.sign({ email: email, id: user.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
-        const hashedToken = hashJwtToken(token);
+        const { accessToken, refreshToken } = generateTokens(user);
+        const hashedAccessToken = hashToken(accessToken);
+        const hashedRefreshToken = hashToken(refreshToken);
 
         await prisma.user.update({
-            where: {
-                id: user.id
-            },
+            where: { id: user.id },
             data: {
-                auth_token: hashedToken,
+                access_token: hashedAccessToken,
+                refresh_token: hashedRefreshToken,
             }
-        })
+        });
+
+        res.status(201).json({
+            message: "Welcome to Flipit!",
+            accessToken,
+            refreshToken
+        });
     } catch (e) {
-        if (e instanceof Prisma.PrismaClientKnownRequestError) {
-            if (e.code === 'P2002') {
-                res.status(409).json({
-                    message: "Email already exists!"
-                })
-            }
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+            return res.status(409).json({ message: "Email already exists!" });
         }
+        return res.status(500).json({ message: "Internal server error" });
     }
-
-    res.status(201).json({
-        message: "Welocome to Flipit!",
-        token
-    });
 }
 
-const LogIn = async (req, res, next) => {
-
+const LogIn = async (req, res) => {
     const { email, password } = req.body;
-    const user = await prisma.user.findUnique({
-        where: {
-            email
-        }
-    })
 
-    if (user) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ message: "User does not exist!" });
+        }
+
         const accuratePassword = await comparePasswords(password, user.password);
-        if (accuratePassword) {
-            const token = jwt.sign({ email: email, id: user.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
-            const hashedToken = hashJwtToken(token);
-            await prisma.user.update({
-                where: {
-                    email
-                },
-                data: {
-                    auth_token: hashedToken,
-                    updated_at: Date.now()
-                }
-            })
-            res.status(200).json({
-                message: "Welcome back!",
-                token
-            })
-        } else {
-            res.status(401).json({
-                message: "Password is incorrect!"
-            })
+        if (!accuratePassword) {
+            return res.status(401).json({ message: "Password is incorrect!" });
         }
-    } else {
-        res.status(404).json({
-            message: "The user does not exist!"
-        })
-    }
-}
 
-const LogOut = async (req, res, next) => {
-    const { email } = req.payload;
-    const user = await prisma.user.findUnique({
-        where: { email }
-    })
+        const { accessToken, refreshToken } = generateTokens(user);
+        const hashedAccessToken = hashToken(accessToken);
+        const hashedRefreshToken = hashToken(refreshToken);
 
-    if (!user) {
-        res.status(404).json({
-            message: "User not found!"
-        })
-    } else {
         await prisma.user.update({
-            where: {
-                email
-            },
+            where: { email },
             data: {
-                auth_token: null,
+                access_token: hashedAccessToken,
+                refresh_token: hashedRefreshToken,
                 updated_at: Date.now()
             }
-        })
+        });
+
         res.status(200).json({
-            message: "You have been logged out!"
-        })
+            message: "Welcome back!",
+            accessToken,
+            refreshToken
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
     }
 }
 
-const RefreshToken = async (req, res, next) => {
-    const token = jwt.sign({ email: req.payload.email, id: req.payload.id }, process.env.SECRET_KEY, { expiresIn: process.env.EXPIERS_TIME });
-    const hashedToken = hashJwtToken(token);
-    await prisma.user.update({
-        where: {
-            email: req.payload.email
-        },
-        data: {
-            auth_token: hashedToken,
-            updated_at: Date.now()
+const LogOut = async (req, res) => {
+    const { email } = req.payload;
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
         }
-    })
-    res.status(200).json({
-        token
-    })
+
+        await prisma.user.update({
+            where: { email },
+            data: {
+                access_token: null,
+                refresh_token: null,
+                updated_at: Date.now()
+            }
+        });
+
+        res.status(200).json({ message: "You have been logged out!" });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+const RefreshToken = async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(401).json({ message: "Refresh token required" });
+    }
+
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const hashedRefreshToken = hashToken(refreshToken);
+
+        const user = await prisma.user.findFirst({
+            where: {
+                email: decoded.email,
+                refresh_token: hashedRefreshToken
+            }
+        });
+
+        if (!user) {
+            return res.status(401).json({ message: "Invalid refresh token" });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+        const hashedAccessToken = hashToken(accessToken);
+        const hashedNewRefreshToken = hashToken(newRefreshToken);
+
+        await prisma.user.update({
+            where: { email: user.email },
+            data: {
+                access_token: hashedAccessToken,
+                refresh_token: hashedNewRefreshToken,
+                updated_at: Date.now()
+            }
+        });
+
+        res.status(200).json({
+            accessToken,
+            refreshToken: newRefreshToken
+        });
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return res.status(401).json({ message: "Refresh token expired" });
+        }
+        return res.status(401).json({ message: "Invalid refresh token" });
+    }
 }
 
 module.exports = {
