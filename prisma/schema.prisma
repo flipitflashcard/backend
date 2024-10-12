@@ -40,6 +40,7 @@ model Box {
   cards Card[]
 
   @@index([created_at])
+  @@unique([user_id, name])
 
   @@map("boxes")
 }
