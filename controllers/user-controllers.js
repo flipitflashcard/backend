@@ -168,22 +168,21 @@ const RefreshToken = async (req, res) => {
             return res.status(401).json({ message: "Invalid refresh token" });
         }
 
-        const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+        // Generate new access token
+        const { accessToken } = generateTokens(user);
         const hashedAccessToken = hashToken(accessToken);
-        const hashedNewRefreshToken = hashToken(newRefreshToken);
 
         await prisma.user.update({
             where: { email: user.email },
             data: {
                 access_token: hashedAccessToken,
-                refresh_token: hashedNewRefreshToken,
                 updated_at: Date.now()
             }
         });
 
         res.status(200).json({
             accessToken,
-            refreshToken: newRefreshToken
+            message: "New access token generated successfully"
         });
     } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
