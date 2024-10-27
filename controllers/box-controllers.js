@@ -18,7 +18,11 @@ const CreateBox = async (req, res) => {
             },
         });
 
-        res.status(201).json(box);
+        // Send response
+        res.status(201).json({
+            message: "Box created successfully",
+            box
+        });
 
     } catch (error) {
         res.status(400).json({ error: error.message });
