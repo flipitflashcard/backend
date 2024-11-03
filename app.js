@@ -19,6 +19,9 @@ app.use("/api/users", user_routes);
 const box_routes = require("./routes/box-routes");
 app.use("/api/boxes", box_routes);
 
+const card_routes = require("./routes/card-routes");
+app.use("/api/card", card_routes);
+
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`);
 });
