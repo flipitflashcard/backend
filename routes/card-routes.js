@@ -6,7 +6,7 @@ const { isAuthenticated } = require("../middlewares/auth");
 
 const router = express.Router();
 
-const { CreateWord, ReviewWord, GetDueCards, GetCards, DeleteCard, GetCard, UpdateWord } = require("../controllers/card-controllers");
+const { CreateWord, ReviewWord, GetDueCards, GetCards, DeleteCard, GetCard, UpdateWord, GetAllOfCards } = require("../controllers/card-controllers");
 
 // Create new card
 router.post("/create", isAuthenticated, CreateWord);
@@ -28,5 +28,8 @@ router.get("/get-card/:id", isAuthenticated, GetCard);
 
 // Update existing card
 router.patch("/update/:id", isAuthenticated, UpdateWord);
+
+// get all cards
+router.get("/get-all-cards", isAuthenticated, GetAllOfCards);
 
 module.exports = router;

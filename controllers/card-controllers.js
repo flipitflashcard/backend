@@ -97,7 +97,7 @@ const UpdateWord = async (req, res) => {
         if (back !== undefined) updateData.back = back;
         if (type !== undefined) updateData.type = type;
         if (is_favorite !== undefined) updateData.is_favorite = is_favorite;
-        if (box_id !== undefined) updateData.box_id = BigInt(box_id);  
+        if (box_id !== undefined) updateData.box_id = BigInt(box_id);
 
         // Update the card
         const updatedWord = await prisma.card.update({
@@ -129,11 +129,11 @@ const UpdateWord = async (req, res) => {
 const ReviewWord = async (req, res) => {
     try {
         const { cardId } = req.params;
-        const { rating } = req.body;
+        const { rating, duration } = req.body;
         const now = Date.now();
 
         // Fetch current card data
-        const card = await prisma.cards.findUnique({
+        const card = await prisma.card.findUnique({
             where: { id: BigInt(cardId) },
             select: {
                 srs_interval: true,
@@ -169,7 +169,7 @@ const ReviewWord = async (req, res) => {
             data: {
                 card_id: BigInt(cardId),
                 rating,
-                duration: 0, // You can add duration tracking later if needed
+                duration,
                 reviewed_at: BigInt(now),
             },
         });
@@ -185,12 +185,17 @@ const ReviewWord = async (req, res) => {
 
 const GetDueCards = async (req, res) => {
     try {
-        const { boxId } = req.params;
+        const { name } = req.params;
+
+        const box = await prisma.box.findFirst({
+            where: { name: name },
+        })
+
         const now = Date.now();
 
         const dueCards = await prisma.card.findMany({
             where: {
-                box_id: BigInt(boxId),
+                box_id: BigInt(box.id),
                 due_date: {
                     lte: BigInt(now)
                 },
@@ -238,6 +243,15 @@ const GetCard = async (req, res) => {
     }
 }
 
+const GetAllOfCards = async (req, res) => {
+    try {
+        const cards = await prisma.card.findMany();        
+        res.status(200).json(cards);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 const DeleteCard = async (req, res) => {
     try {
         const { id } = req.params;
@@ -257,5 +271,6 @@ module.exports = {
     GetCards,
     DeleteCard,
     GetCard,
-    UpdateWord
+    UpdateWord,
+    GetAllOfCards
 };
