@@ -192,9 +192,51 @@ const RefreshToken = async (req, res) => {
     }
 }
 
+const GetUserProfile = async (req, res) => {
+    const { email } = req.payload;
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
+        }
+        console.log();
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+const UpdateUserProfile = async (req, res) => {
+    const { email } = req.payload;
+    const { password } = req.body;
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        await prisma.user.update({
+            where: { email },
+            data: {
+                password: hashedPassword,
+                updated_at: Date.now()
+            }
+        });
+
+        res.status(200).json({ message: "Your profile updated successfully!" });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
 module.exports = {
     SignUp,
     LogIn,
     LogOut,
-    RefreshToken
+    RefreshToken,
+    GetUserProfile,
+    UpdateUserProfile
 }
