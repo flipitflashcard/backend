@@ -7,7 +7,7 @@ const { checkErrors } = require("../middlewares/check-errors");
 
 const router = express.Router();
 
-const { SignUp, LogIn, LogOut, RefreshToken } = require("../controllers/user-controllers");
+const { SignUp, LogIn, LogOut, RefreshToken, GetUserProfile, UpdateUserProfile } = require("../controllers/user-controllers");
 
 // Public routes
 router.post(
@@ -43,7 +43,10 @@ router.post("/refresh-token", RefreshToken);
 // Protected routes
 router.post("/logout", isAuthenticated, LogOut);
 
-// If you have other protected routes, add them like this:
-// router.get("/profile", isAuthenticated, GetUserProfile);
+// Get user profile
+router.get("/profile", isAuthenticated, GetUserProfile);
+
+// Update user profile
+router.patch("/update-profile", isAuthenticated, UpdateUserProfile);
 
 module.exports = router;
