@@ -1,8 +1,11 @@
+const { minioClient, bucketName } = require('../config/minio');
 const { PrismaClient, Prisma } = require("@prisma/client");
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+const jwt = require("jsonwebtoken");
 const prisma = new PrismaClient();
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
 
 // Existing helper functions remain the same
 async function hashPassword(password) {
@@ -94,6 +97,7 @@ const LogIn = async (req, res) => {
         }
 
         const accuratePassword = await comparePasswords(password, user.password);
+
         if (!accuratePassword) {
             return res.status(401).json({ message: "Password is incorrect!" });
         }
@@ -192,15 +196,70 @@ const RefreshToken = async (req, res) => {
     }
 }
 
-const GetUserProfile = async (req, res) => {
+const UpdateProfilePicture = async (req, res) => {
     const { email } = req.payload;
 
     try {
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(404).json({ message: "User not found!" });
         }
-        console.log();
+
+        // Generate unique filename
+        const fileExtension = req.file.originalname.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExtension}`;
+
+        // Upload to MinIO
+        await minioClient.putObject(
+            bucketName,
+            fileName,
+            req.file.buffer,
+            req.file.buffer.length
+        );
+
+        // Generate URL
+        const fileUrl = `${process.env.MINIO_PUBLIC_URL}/${bucketName}/${fileName}`;
+
+        // Update user profile in database
+        await prisma.user.update({
+            where: { email },
+            data: {
+                profile_picture: fileUrl,
+                updated_at: Date.now()
+            }
+        });
+
+        res.status(200).json({
+            message: "Profile picture updated successfully!",
+            profile_picture: fileUrl
+        });
+    } catch (error) {
+        console.error('Error updating profile picture:', error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+const GetUserProfile = async (req, res) => {
+    const { email } = req.payload;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                profile_picture: true,
+                created_at: true,
+                updated_at: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ message: "User not found!" });
+        }
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ message: "Internal server error" });
@@ -238,5 +297,6 @@ module.exports = {
     LogOut,
     RefreshToken,
     GetUserProfile,
-    UpdateUserProfile
+    UpdateUserProfile,
+    UpdateProfilePicture
 }
