@@ -7,7 +7,10 @@ const { checkErrors } = require("../middlewares/check-errors");
 
 const router = express.Router();
 
-const { SignUp, LogIn, LogOut, RefreshToken, GetUserProfile, UpdateUserProfile } = require("../controllers/user-controllers");
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+const { SignUp, LogIn, LogOut, RefreshToken, GetUserProfile, UpdateUserProfile, UpdateProfilePicture } = require("../controllers/user-controllers");
 
 // Public routes
 router.post(
@@ -49,4 +52,9 @@ router.get("/profile", isAuthenticated, GetUserProfile);
 // Update user profile
 router.patch("/update-profile", isAuthenticated, UpdateUserProfile);
 
+router.post('/update-profile-picture',
+    isAuthenticated,
+    upload.single('profile_picture'),
+    UpdateProfilePicture
+);
 module.exports = router;
