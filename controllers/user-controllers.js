@@ -210,8 +210,8 @@ const UpdateProfilePicture = async (req, res) => {
         }
 
         // Generate unique filename
-        const fileExtension = req.file.originalname.split('.').pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExtension}`;
+        // const fileExtension = req.file.originalname.split('.').pop();
+        const fileName = `${user.id}.png`;
 
         // Upload to MinIO
         await minioClient.putObject(
@@ -276,17 +276,20 @@ const UpdateUserProfile = async (req, res) => {
             return res.status(404).json({ message: "User not found!" });
         }
 
-        const hashedPassword = await hashPassword(password);
+        if (password !== '') {
+            const hashedPassword = await hashPassword(password);
+            await prisma.user.update({
+                where: { email },
+                data: {
+                    password: hashedPassword,
+                    updated_at: Date.now()
+                }
+            });
+            res.status(200).json({ message: "Your profile updated successfully!" });
+        } else {
+            res.status(200).json({ message: "Your profile updated successfully!" });
+        }
 
-        await prisma.user.update({
-            where: { email },
-            data: {
-                password: hashedPassword,
-                updated_at: Date.now()
-            }
-        });
-
-        res.status(200).json({ message: "Your profile updated successfully!" });
     } catch (error) {
         res.status(500).json({ message: "Internal server error" });
     }
