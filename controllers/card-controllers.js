@@ -185,10 +185,10 @@ const ReviewWord = async (req, res) => {
 
 const GetDueCards = async (req, res) => {
     try {
-        const { name } = req.params;
-
+        const { boxId } = req.params;
+                
         const box = await prisma.box.findFirst({
-            where: { name: name },
+            where: { name: boxId },
         })
 
         const now = Date.now();
