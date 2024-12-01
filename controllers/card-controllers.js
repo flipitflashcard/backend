@@ -212,6 +212,23 @@ const GetDueCards = async (req, res) => {
     }
 };
 
+const setFavorite = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_favorite } = req.body;
+        const card = await prisma.card.update({
+            where: { id: BigInt(id) },
+            data: { is_favorite: is_favorite },
+        });
+        res.status(200).json({
+            message: "Your favorite card has been selected successfully!",
+            card
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 const GetCards = async (req, res) => {
     try {
         const { name } = req.params;
@@ -245,7 +262,7 @@ const GetCard = async (req, res) => {
 
 const GetAllOfCards = async (req, res) => {
     try {
-        const cards = await prisma.card.findMany();        
+        const cards = await prisma.card.findMany();
         res.status(200).json(cards);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -272,5 +289,6 @@ module.exports = {
     DeleteCard,
     GetCard,
     UpdateWord,
-    GetAllOfCards
+    GetAllOfCards,
+    setFavorite
 };
