@@ -36,7 +36,7 @@ model Box {
   updated_at BigInt? @db.UnsignedBigInt
   deleted_at BigInt? @db.UnsignedBigInt
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 
   cards Card[]
 
@@ -61,7 +61,7 @@ model Card {
   updated_at BigInt? @db.UnsignedBigInt
   deleted_at BigInt? @db.UnsignedBigInt
 
-  box Box @relation(fields: [box_id], references: [id], onDelete: Cascade)
+  box Box @relation(fields: [box_id], references: [id])
   reviews Review[]
 
   @@index([due_date])
@@ -76,7 +76,7 @@ model Review {
   duration Int
   reviewed_at BigInt @db.UnsignedBigInt
 
-  card Card @relation(fields: [card_id], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [card_id], references: [id])
 
   @@map("reviews")
 }
@@ -89,7 +89,7 @@ model Setting {
   created_at BigInt @db.UnsignedBigInt
   updated_at BigInt? @db.UnsignedBigInt
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 
   @@map("settings")
 }
