@@ -99,7 +99,7 @@ const UpdateBox = async (req, res) => {
 const DeleteBox = async (req, res) => {
     try {
         const { id } = req.params;
-        await prisma.box.delete({
+        await prisma.box.delete({   
             where: { id: parseInt(id) },
         });
         res.status(204).send();
