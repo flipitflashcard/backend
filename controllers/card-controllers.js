@@ -262,12 +262,37 @@ const GetCard = async (req, res) => {
 
 const GetAllOfCards = async (req, res) => {
     try {
-        const cards = await prisma.card.findMany();
-        res.status(200).json(cards);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalCards = await prisma.card.count({
+            where: {
+                deleted_at: null
+            }
+        });
+
+        const cards = await prisma.card.findMany({
+            where: {
+                deleted_at: null
+            },
+            skip,
+            take: limit,
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+
+        res.status(200).json({
+            cards,
+            totalPages: Math.ceil(totalCards / limit),
+            currentPage: page,
+            totalCards
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 const DeleteCard = async (req, res) => {
     try {

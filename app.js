@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 BigInt.prototype.toJSON = function () {
     return Number(this);
 }
