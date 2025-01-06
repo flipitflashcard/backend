@@ -186,7 +186,7 @@ const ReviewWord = async (req, res) => {
 const GetDueCards = async (req, res) => {
     try {
         const { boxId } = req.params;
-                
+
         const box = await prisma.box.findFirst({
             where: { name: boxId },
         })
@@ -232,16 +232,39 @@ const setFavorite = async (req, res) => {
 const GetCards = async (req, res) => {
     try {
         const { name } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
         const box = await prisma.box.findFirst({
             where: { name: name },
         });
 
-        const cards = await prisma.card.findMany({
-            where: { box_id: box.id },
+        const totalCards = await prisma.card.count({
+            where: {
+                box_id: box.id,
+                deleted_at: null
+            }
         });
 
-        res.status(200).json(cards);
+        const cards = await prisma.card.findMany({
+            where: {
+                box_id: box.id,
+                deleted_at: null
+            },
+            skip,
+            take: limit,
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+
+        res.status(200).json({
+            cards,
+            totalPages: Math.ceil(totalCards / limit),
+            currentPage: page,
+            totalCards
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
