@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # سرویس پایگاه داده MySQL
+  db_mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: 'flip'
+      MYSQL_ROOT_PASSWORD: '12345' # همان رمزی که در فایل .env است
+    ports:
+      - "3307:3306" # اتصال پورت هاست به کانتینر
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # سرویس phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: pma
+    restart: unless-stopped
+    ports:
+      - "8081:80" # دسترسی از طریق پورت 8081 روی هاست
+    environment:
+      PMA_HOST: 'db_mysql' # نام سرویس دیتابیس در همین فایل
+      PMA_PORT: 3306
+    depends_on:
+      - db_mysql
+
+  # سرویس MinIO
+  minio:
+    image: minio/minio
+    container_name: minio_storage
+    restart: unless-stopped
+    ports:
+      - "9000:9000"  # برای API
+      - "9001:9001"  # برای کنسول وب
+    environment:
+      MINIO_ROOT_USER: 'FLIPMAINROOT'      # همان Access Key در فایل .env
+      MINIO_ROOT_PASSWORD: 'REZA80FLIPLEARN' # همان Secret Key در فایل .env
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  mysql_data:
+  minio_data:
